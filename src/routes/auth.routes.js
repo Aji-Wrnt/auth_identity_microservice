@@ -22,8 +22,6 @@ router.post('/login', authLimiter, validate(loginSchema), authController.login);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', authController.logout);
 
-export default router;
-
 // Protected Route: Mendapatkan profil user yang sedang login
 router.get('/me', authenticate, authController.getMe);
 
@@ -37,3 +35,5 @@ router.get('/worker/dashboard', authenticate, authorizeRoles('worker'), (req, re
 
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
 router.post('/reset-password', authLimiter, validate(resetPasswordSchema), authController.resetPassword);
+
+export default router;

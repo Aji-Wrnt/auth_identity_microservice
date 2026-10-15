@@ -196,7 +196,7 @@ export const resetPassword = async ({ token, newPassword }) => {
     await markResetTokenAsUsed(resetSession.id, client);
 
     // 3. Cabut semua sesi login aktif akun ini (Force Logout di semua device)
-    await revokeAllUserSessions(resetSession.user_id);
+    await revokeAllUserSessions(resetSession.user_id, client);
 
     await client.query('COMMIT');
     return { message: 'Password berhasil diubah. Silakan login kembali dengan password baru.' };

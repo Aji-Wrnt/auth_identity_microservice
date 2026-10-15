@@ -41,11 +41,12 @@ export const revokeSessionById = async (sessionId) => {
 };
 
 // Cabut seluruh sesi user (misal saat reset password atau indikasi pembobolan akun)
-export const revokeAllUserSessions = async (userId) => {
+export const revokeAllUserSessions = async (userId, client) => {
   const queryText = `
     UPDATE auth_sessions
     SET is_revoked = TRUE
     WHERE user_id = $1
   `;
-  await pool.query(queryText, [userId]);
+  const db = client || pool;
+  await db.query(queryText, [userId]);
 };
