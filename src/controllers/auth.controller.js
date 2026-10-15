@@ -1,4 +1,4 @@
-// penangan req http. cookie, dan respon json yg standar
+// penangah req http. cookie, dan respon json yg standar
 
 import * as authService from '../services/auth.service.js';
 import { getUserFullProfile } from '../repositories/user.repository.js';
@@ -110,6 +110,34 @@ export const getMe = async (req, res, next) => {
     return res.status(200).json({
       status: 'success',
       data: { profile },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// forgto pass
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const result = await authService.requestPasswordReset(req.body.email);
+    return res.status(200).json({
+      status: 'success',
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const result = await authService.resetPassword({
+      token: req.body.token,
+      newPassword: req.body.newPassword,
+    });
+    return res.status(200).json({
+      status: 'success',
+      message: result.message,
     });
   } catch (error) {
     next(error);

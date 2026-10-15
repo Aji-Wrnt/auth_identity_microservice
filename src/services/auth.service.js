@@ -4,6 +4,10 @@ import { findUserByEmail, findUserById, createUserWithProfile } from '../reposit
 import { createSession, findValidSessionByHash, revokeSessionById, revokeAllUserSessions } from '../repositories/session.repository.js';
 import { hashPassword, verifyPassword, hashToken } from '../utils/hash.util.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.util.js';
+import { createPasswordResetToken, findValidResetToken, markResetTokenAsUsed } from '../repositories/passwordReset.repository.js';
+import { updateUserPassword } from '../repositories/user.repository.js';
+import { pool } from '../config/database.js';
+import crypto from 'crypto';
 
 export const registerUser = async (data) => {
   // 1. Cek apakah email sudah terdaftar
@@ -139,5 +143,67 @@ export const logoutUser = async (rawRefreshToken) => {
   const session = await findValidSessionByHash(tokenHash);
   if (session) {
     await revokeSessionById(session.id);
+  }
+};
+
+
+export const requestPasswordReset = async (email) => {
+  const user = await findUserByEmail(email);
+  // Proteksi keamanan: jangan beri tahu apakah email terdaftar atau tidak (mencegah user enumeration)
+  if (!user || user.status !== 'active') {
+    return { message: 'Jika email terdaftar, instruksi reset password telah dikirim.' };
+  }
+
+  // Buat random raw token aman
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashToken(rawToken);
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // Kadaluwarsa dalam 15 menit
+
+  await createPasswordResetToken({
+    userId: user.id,
+    tokenHash,
+    expiresAt,
+  });
+
+  // Catatan: Di production, rawToken dikirim via email service (Sendgrid/Resend).
+  // Untuk keperluan local testing, kita cetak langsung ke log terminal.
+  console.log(`\n[DEV] Token Reset Password untuk ${email}:`);
+  console.log(`token: ${rawToken}\n`);
+
+  return { message: 'Jika email terdaftar, instruksi reset password telah dikirim.' };
+};
+
+export const resetPassword = async ({ token, newPassword }) => {
+  const tokenHash = hashToken(token);
+  const resetSession = await findValidResetToken(tokenHash);
+
+  if (!resetSession) {
+    const error = new Error('Token reset password tidak valid atau sudah kedaluwarsa');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const newPasswordHash = await hashPassword(newPassword);
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Update password baru
+    await updateUserPassword(resetSession.user_id, newPasswordHash, client);
+
+    // 2. Tandai token sudah terpakai
+    await markResetTokenAsUsed(resetSession.id, client);
+
+    // 3. Cabut semua sesi login aktif akun ini (Force Logout di semua device)
+    await revokeAllUserSessions(resetSession.user_id);
+
+    await client.query('COMMIT');
+    return { message: 'Password berhasil diubah. Silakan login kembali dengan password baru.' };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
   }
 };

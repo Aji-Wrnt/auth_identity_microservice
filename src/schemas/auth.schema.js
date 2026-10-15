@@ -38,3 +38,16 @@ export const loginSchema = z.object({
     password: z.string().min(1, 'Password wajib diisi'),
   }),
 });
+
+export const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email('Format email tidak valid').toLowerCase().trim(),
+  }),
+});
+
+export const resetPasswordSchema = z.object({
+  body: z.object({
+    token: z.string().min(1, 'Token reset wajib diisi'),
+    newPassword: passwordValidation,
+  }),
+});

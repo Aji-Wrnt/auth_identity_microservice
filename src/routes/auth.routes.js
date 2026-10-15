@@ -3,10 +3,11 @@
 import { Router } from 'express';
 import * as authController from '../controllers/auth.controller.js';
 import { validate } from '../middlewares/validate.middleware.js';
-import { registerSchema, loginSchema } from '../schemas/auth.schema.js';
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../schemas/auth.schema.js';
 import { authLimiter } from '../middlewares/rateLimiter.middleware.js';
 import { publicKey } from '../config/keys.js';
 import { authenticate, authorizeRoles } from '../middlewares/auth.middleware.js';
+
 
 const router = Router();
 
@@ -33,3 +34,6 @@ router.get('/worker/dashboard', authenticate, authorizeRoles('worker'), (req, re
     message: `Selamat datang di dashboard mitra tukang, ID: ${req.user.id}`,
   });
 });
+
+router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
+router.post('/reset-password', authLimiter, validate(resetPasswordSchema), authController.resetPassword);

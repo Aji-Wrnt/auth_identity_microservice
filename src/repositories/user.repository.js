@@ -94,3 +94,14 @@ export const getUserFullProfile = async (userId, role) => {
     return rows[0] || null;
   }
 };
+
+//update password
+export const updateUserPassword = async (userId, newPasswordHash, client) => {
+  const queryText = `
+    UPDATE users
+    SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2
+  `;
+  const db = client || pool;
+  await db.query(queryText, [newPasswordHash, userId]);
+};
